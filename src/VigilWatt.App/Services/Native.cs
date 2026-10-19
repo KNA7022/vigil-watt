@@ -430,6 +430,9 @@ internal static class Native
     public static extern IntPtr SetCapture(IntPtr hwnd);
 
     [DllImport("user32.dll")]
+    public static extern short GetAsyncKeyState(int virtualKey);
+
+    [DllImport("user32.dll")]
     public static extern bool ReleaseCapture();
 
     [DllImport("user32.dll")]

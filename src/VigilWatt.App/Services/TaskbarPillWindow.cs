@@ -36,6 +36,7 @@ public sealed class TaskbarPillWindow : IDisposable
 
     private readonly DispatcherQueue _dispatcher = DispatcherQueue.GetForCurrentThread();
     private readonly DispatcherQueueTimer _timer;
+    private readonly DispatcherQueueTimer _dragTimer;
 
     private IntPtr _hwnd, _taskbar, _tipHwnd;
     private IntPtr _memDc, _dib, _oldDib, _dibBits;
@@ -76,6 +77,9 @@ public sealed class TaskbarPillWindow : IDisposable
         _timer.Interval = TimeSpan.FromMilliseconds(FollowIntervalMs);
         _timer.Tick += (_, _) => Update();
         _timer.Start();
+        _dragTimer = _dispatcher.CreateTimer();
+        _dragTimer.Interval = TimeSpan.FromMilliseconds(16);
+        _dragTimer.Tick += (_, _) => PollDrag();
 
         Update();
     }
@@ -117,6 +121,8 @@ public sealed class TaskbarPillWindow : IDisposable
         _disposed = true;
 
         _timer.Stop();
+        _dragTimer.Stop();
+        if (_dragging) OnLButtonUp();
         App.Services.Manager.DeviceUpdated -= OnDeviceUpdated;
         App.Services.Manager.DevicesChanged -= OnDevicesChanged;
         HideTip();
@@ -247,6 +253,7 @@ public sealed class TaskbarPillWindow : IDisposable
 
     private void ReleaseWindow()
     {
+        if (_dragging) OnLButtonUp();
         ReleaseTipWindow();
         if (_hwnd != IntPtr.Zero)
         {
@@ -569,6 +576,21 @@ public sealed class TaskbarPillWindow : IDisposable
         var p = Native.GetCursorPos();
         _dragStartCursor = _taskbarHorizontal ? p.X : p.Y;
         _dragStartOffset = visible;
+        _dragTimer.Start();
+    }
+
+    // 非前台的任务栏子窗口无法可靠捕获跨窗口鼠标消息，定时读取真实光标补齐拖动。
+    private void PollDrag()
+    {
+        if (!_dragging) return;
+        if ((Native.GetAsyncKeyState(0x01) & 0x8000) == 0)
+        {
+            OnLButtonUp();
+            return;
+        }
+        var p = Native.GetCursorPos();
+        _offsetPx = _dragStartOffset + ((_taskbarHorizontal ? p.X : p.Y) - _dragStartCursor);
+        ApplyPosition();
     }
 
     private void OnMouseMove(IntPtr lParam)
@@ -799,6 +821,7 @@ public sealed class TaskbarPillWindow : IDisposable
     {
         if (!_dragging) return;
         _dragging = false;
+        _dragTimer.Stop();
         Native.ReleaseCapture();
 
         var s = App.Services.Settings;

@@ -298,6 +298,17 @@
                                 <ComboBox Grid.Column="1" x:Name="TaskbarMaxCombo" Width="180"
                                           VerticalAlignment="Center" />
                             </Grid>
+                            <Border Style="{StaticResource RowDividerStyle}" />
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16" Padding="0,12">
+                                <StackPanel Spacing="2" VerticalAlignment="Center">
+                                    <TextBlock Text="位置偏移" Style="{StaticResource RowTitleStyle}" />
+                                    <TextBlock Text="负数向左，正数向右；竖向任务栏为上/下。设为 0 恢复默认位置，可避开网速等显示。"
+                                               Style="{StaticResource RowDescStyle}" />
+                                </StackPanel>
+                                <NumberBox Grid.Column="1" x:Name="TaskbarOffsetBox" Width="180"
+                                           Minimum="-20000" Maximum="20000" SmallChange="10" LargeChange="50"
+                                           SpinButtonPlacementMode="Inline" VerticalAlignment="Center" />
+                            </Grid>
                         </StackPanel>
                     </Border>
                 </StackPanel>

@@ -92,6 +92,9 @@ public sealed partial class SettingsPage : Page
         SelectByTag(TaskbarModeCombo, taskbarMode);
         TaskbarModeHintText.Text = TaskbarBatteryMode.Describe(taskbarMode);
         SelectByTag(TaskbarMaxCombo, TaskbarBatteryOptions.Clamp(s.TaskbarBatteryMaxDevices));
+        TaskbarOffsetBox.Value = TaskbarLayout.ScaleOffset(s.TaskbarBatteryOffsetX,
+            (uint)Math.Max(0, s.TaskbarBatteryOffsetDpi), 96);
+        _loadedTaskbarOffset = TaskbarOffsetBox.Value;
 
         // 窗口背景：下拉框选中"用户偏好"，副标题说"这台机器上实际会生效什么"——
         // 两者不是一回事（Win10 上选 Mica 会静默降级成 Acrylic），分开显示才不会让人困惑。
@@ -399,6 +402,8 @@ public sealed partial class SettingsPage : Page
         public string SearchText => $"{Title} {Description} {Category} {Aliases}";
     }
 
+    private double _loadedTaskbarOffset;
+
     private void Save_Click(object sender, RoutedEventArgs e)
     {
         var s = App.Services.Settings;
@@ -417,6 +422,13 @@ public sealed partial class SettingsPage : Page
             ? WidgetMaxDevicesOptions.Clamp(maxValue)
             : WidgetMaxDevicesOptions.Default;
         s.TaskbarBatteryEnabled = TaskbarToggle.IsOn;
+        // 未编辑时保留拖动结果，避免缓存的设置页覆盖贴片刚保存的新位置。
+        if (double.IsFinite(TaskbarOffsetBox.Value) && TaskbarOffsetBox.Value != _loadedTaskbarOffset)
+        {
+            s.TaskbarBatteryOffsetX = (int)Math.Round(TaskbarOffsetBox.Value);
+            s.TaskbarBatteryOffsetDpi = 96;
+            _loadedTaskbarOffset = TaskbarOffsetBox.Value;
+        }
         s.TaskbarBatteryMode = TaskbarBatteryMode.Normalize(
             (TaskbarModeCombo.SelectedItem as ComboBoxItem)?.Tag as string);
         s.TaskbarBatteryMaxDevices = TaskbarMaxCombo.SelectedItem is ComboBoxItem taskbarMaxItem
